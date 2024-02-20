@@ -5,6 +5,7 @@ from typing import List, Optional, Tuple
 
 import cv2
 import numpy as np
+import requests
 
 from .. import __rootdir__
 from . import config, detector
@@ -39,9 +40,13 @@ class Recognizer(object):
                 if screencap is not None:
                     self.screencap = screencap
                 else:
-                    self.screencap = self.device.screencap()
+                    url = "http://localhost:53516/screenshot"
+                    resp = requests.get(url, stream=True).raw
+                    self.screencap = bytearray(resp.read())
                 self.img = bytes2img(self.screencap, False)
+                self.img = cv2.rotate(self.img, cv2.ROTATE_180)
                 self.gray = bytes2img(self.screencap, True)
+                self.gray = cv2.rotate(self.gray, cv2.ROTATE_180)
                 self.h, self.w, _ = self.img.shape
                 self.matcher = Matcher(self.gray) if build else None
                 self.scene = Scene.UNDEFINED
