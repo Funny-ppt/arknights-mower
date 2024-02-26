@@ -40,13 +40,9 @@ class Recognizer(object):
                 if screencap is not None:
                     self.screencap = screencap
                 else:
-                    url = "http://localhost:53516/screenshot"
-                    resp = requests.get(url, stream=True).raw
-                    self.screencap = bytearray(resp.read())
+                    self.screencap = self.device.screencap()
                 self.img = bytes2img(self.screencap, False)
-                self.img = cv2.rotate(self.img, cv2.ROTATE_180)
                 self.gray = bytes2img(self.screencap, True)
-                self.gray = cv2.rotate(self.gray, cv2.ROTATE_180)
                 self.h, self.w, _ = self.img.shape
                 self.matcher = Matcher(self.gray) if build else None
                 self.scene = Scene.UNDEFINED

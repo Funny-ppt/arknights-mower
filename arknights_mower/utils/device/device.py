@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import time
+import subprocess
 from typing import Optional
 
 from .. import config
@@ -111,8 +112,10 @@ class Device(object):
 
     def screencap(self, save: bool = False) -> bytes:
         """ get a screencap """
-        command = 'screencap -p 2>/dev/null'
-        screencap = self.run(command)
+        self.run('screencap -p /sdcard/sc.png')
+        subprocess.run(["adb", "pull", "/sdcard/sc.png"])
+        with open("sc.png", "rb") as f:
+            screencap = f.read()
         if save:
             save_screenshot(screencap)
         return screencap
