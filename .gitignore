@@ -188,7 +188,12 @@ MAA
 /pyvenv.cfg
 /lib64
 
-#testspace
+# InfrastSim Binaries
+InfrastSim.dll
+InfrastSim.so
+InfrastSim.dylib
+
+# testspace
 /testspace
 ui/public/depot/CONSUME/*
 ui/public/depot/MATERIAL/*

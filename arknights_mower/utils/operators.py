@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta
+
+from .simu_operators import SimulatorOperator
 from ..data import agent_list, agent_arrange_order, base_room_list
 from ..solvers.record import save_action_to_sqlite_decorator
 from ..utils.log import logger
@@ -21,8 +23,9 @@ class Operators(object):
     current_room_changed_callback = None
     first_init = True
 
-    def __init__(self, plan):
+    def __init__(self, plan, simulator=None):
         self.operators = {}
+        self.simulator = simulator
         self.groups = {}
         self.exhaust_agent = []
         self.exhaust_group = []
@@ -97,7 +100,7 @@ class Operators(object):
                 if data.agent in self.operators and data.agent != "Free":
                     return f'高效组干员不可重复 房间->{room},{self.operators[data.agent].room}, 干员->{data.agent}'
                 self.add(Operator(data.agent, room, idx, data.group, data.replacement, 'high',
-                                  operator_type="high"))
+                                  operator_type="high", simulator=self.simulator))
         missing_replacements = []
         for room in self.plan.keys():
             if room.startswith("dorm") and len(self.plan[room]) != 5:
@@ -120,7 +123,7 @@ class Operators(object):
                         # 普通替换
                         if _replacement in self.operators and self.operators[_replacement].is_high():
                             return f'替换组不可用高效组干员: 房间->{room}, 干员->{_replacement}'
-                        self.add(Operator(_replacement, ""))
+                        self.add(Operator(_replacement, "", simulator=self.simulator))
                     else:
                         if _replacement not in self.operators:
                             return f'菲亚梅塔替换不在高效组列: 房间->{room}, 干员->{_replacement}'
@@ -167,7 +170,7 @@ class Operators(object):
         else:
             for key, value in self.shadow_copy.items():
                 if key not in self.operators:
-                    self.add(Operator(key, ""))
+                    self.add(Operator(key, "", simulator=self.simulator))
         if len(self.dorm) < self.config.max_resting_count:
             return f'宿舍Free总数 {len(self.dorm)}小于最大分组数 {self.config.max_resting_count}'
         # 跑单
@@ -367,7 +370,7 @@ class Operators(object):
             if dorm.position[0] == room:
                 for i, _name in enumerate(plan):
                     if _name not in self.operators.keys():
-                        self.add(Operator(_name, ""))
+                        self.add(Operator(_name, "", simulator=self.simulator))
                     if not self.config.free_room:
                         if self.operators[_name].is_high() and not self.operators[
                             _name].room.startswith('dorm'):
@@ -511,7 +514,7 @@ class Operator(object):
     def __init__(self, name, room, index=-1, group='', replacement=[], resting_priority='low', current_room='',
                  exhaust_require=False,
                  mood=24, upper_limit=24, rest_in_full=False, current_index=-1, lower_limit=0, operator_type="low",
-                 depletion_rate=0, time_stamp=None, refresh_order_room=None):
+                 depletion_rate=0, time_stamp=None, refresh_order_room=None, simulator=None):
         if refresh_order_room is not None:
             self.refresh_order_room = refresh_order_room
         self.refresh_order_room = [False, []]
@@ -532,6 +535,7 @@ class Operator(object):
         self.lower_limit = lower_limit
         self.depletion_rate = depletion_rate
         self.time_stamp = time_stamp
+        self.simu_op = SimulatorOperator(simulator, name) if simulator else None
 
     @property
     def current_room(self):
@@ -573,6 +577,9 @@ class Operator(object):
         return False
 
     def current_mood(self):
+        if self.simu_op: # 如果使用模拟器作为后端
+            return self.simu_op.current_mood()
+
         predict = self.mood
         if self.time_stamp is not None:
             predict = self.mood - self.depletion_rate * (datetime.now() - self.time_stamp).total_seconds() / 3600

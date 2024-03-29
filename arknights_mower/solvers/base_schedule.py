@@ -961,7 +961,8 @@ class BaseSchedulerSolver(BaseSolver, BaseMixin):
         return exist_replacement, plan, high_free - _high, low_free - _low
 
     def initialize_operators(self):
-        self.op_data = Operators(self.global_plan)
+        simulator = getattr(self, 'simulator')
+        self.op_data = Operators(self.global_plan, simulator=simulator)
         Operators.current_room_changed_callback = self.current_room_changed
         return self.op_data.init_and_validate()
 
